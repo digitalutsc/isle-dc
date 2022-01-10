@@ -137,8 +137,6 @@ update-settings-php:
 update-config-from-environment:
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_islandora_module"
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_jwt_module"
-	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_islandora_default_module"
-	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_search_api_solr_module"
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_matomo_module"
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_openseadragon"
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_islandora_default_module"
@@ -166,6 +164,21 @@ namespaces:
 ## Reconstitute the site from environment variables.
 hydrate: update-settings-php update-config-from-environment solr-cores namespaces run-islandora-migrations
 	docker-compose exec -T drupal drush cr -y
+
+# Updates configuration from environment variables.
+# Allow all commands to fail as the user may not have all the modules like matomo, etc.
+.PHONY: hydrate-local-standard
+.SILENT: hydrate-local-standard
+ hydrate-local-standard:
+	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_search_api_solr_module"
+	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable search_api_solr_defaults
+	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites create_solr_core_with_default_config"
+	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable responsive_image syslog devel content_browser admin_toolbar pdf matomo restui islandora_defaults controlled_access_terms_defaults islandora_fits islandora_breadcrumbs islandora_iiif islandora_oaipmh islandora_search
+	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_islandora_default_module"
+	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_matomo_module"
+	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_openseadragon"
+	-docker-compose exec -T drupal drush -l $(SITE) theme:enable olivero
+	-docker-compose exec -T drupal drush -l $(SITE) config:set system.theme default olivero -y
 
 # Created by the standard profile, need to be deleted to import a site that was
 # created with the standard profile.
@@ -384,6 +397,33 @@ local-install-profile: generate-secrets
 	docker-compose exec -T drupal with-contenv bash -lc 'drush migrate:rollback islandora_defaults_tags,islandora_tags'
 	$(MAKE) initial_content
 	$(MAKE) login
+
+# git clone https://github.com/dannylamb/islandora-sandbox codebase
+.PHONY: local-standard
+.SILENT: local-standard
+local-standard:
+	$(MAKE) download-default-certs
+	php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+	if [ `wget -q -O - https://composer.github.io/installer.sig` != `php -r "echo hash_file('sha384', 'composer-setup.php');"` ]; then \
+		>&2 echo 'ERROR: Invalid installer checksum'; \
+		rm composer-setup.php; \
+		exit 1; \
+	fi
+	php composer-setup.php --quiet
+	rm composer-setup.php
+	if [ ! -d ./codebase ]; then \
+		git clone -b 2_x_update https://github.com/Natkeeran/islandora-sandbox.git codebase; \
+	fi
+	(cd codebase && php ../composer.phar update)
+	$(MAKE) set-files-owner SRC=$(CURDIR)/codebase
+	$(MAKE) -B docker-compose.yml ENVIRONMENT=local
+	docker-compose up -d
+	$(MAKE) install ENVIRONMENT=local
+	$(MAKE) hydrate ENVIRONMENT=local
+	$(MAKE) hydrate-local-standard ENVIRONMENT=local
+	$(MAKE) run-islandora-migrations ENVIRONMENT=local
+	docker-compose exec -T drupal with-contenv bash -lc "composer require mjordan/islandora_workbench_integration"
+	docker-compose exec -T drupal with-contenv bash -lc "drush en -y islandora_workbench_integration"
 
 .PHONY: initial_content
 initial_content:
