@@ -162,18 +162,18 @@ namespaces:
 .PHONY: hydrate
 .SILENT: hydrate
 ## Reconstitute the site from environment variables.
-hydrate: update-settings-php update-config-from-environment solr-cores namespaces run-islandora-migrations
+hydrate: update-settings-php update-config-from-environment solr-cores namespaces
 	docker-compose exec -T drupal drush cr -y
 
 # Updates configuration from environment variables.
 # Allow all commands to fail as the user may not have all the modules like matomo, etc.
 .PHONY: hydrate-local-standard
 .SILENT: hydrate-local-standard
- hydrate-local-standard:
+ hydrate-local-standard:  update-settings-php solr-cores namespaces
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_search_api_solr_module"
 	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable search_api_solr_defaults
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites create_solr_core_with_default_config"
-	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable responsive_image syslog devel content_browser admin_toolbar pdf matomo restui islandora_defaults controlled_access_terms_defaults islandora_fits islandora_breadcrumbs islandora_iiif islandora_oaipmh islandora_search
+	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable responsive_image syslog devel admin_toolbar pdf matomo restui controlled_access_terms_defaults jsonld field_group field_permissions features file_entity view_mode_switch islandora_defaults islandora_marc_countries chart_suite openseadragon chart_suite ableplayer islandora_iiif islandora_display islandora_advanced_search media_thumbnails media_thumbnails_pdf media_thumbnails_video
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_islandora_default_module"
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_matomo_module"
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_openseadragon"
@@ -412,18 +412,15 @@ local-standard:
 	php composer-setup.php --quiet
 	rm composer-setup.php
 	if [ ! -d ./codebase ]; then \
-		git clone -b 2_x_update https://github.com/Natkeeran/islandora-sandbox.git codebase; \
+		git clone -b islandora_lite https://github.com/Natkeeran/islandora-sandbox.git codebase; \
 	fi
 	(cd codebase && php ../composer.phar update)
 	$(MAKE) set-files-owner SRC=$(CURDIR)/codebase
 	$(MAKE) -B docker-compose.yml ENVIRONMENT=local
 	docker-compose up -d
+	docker-compose run drupal apk add php7-imagick
 	$(MAKE) install ENVIRONMENT=local
-	$(MAKE) hydrate ENVIRONMENT=local
 	$(MAKE) hydrate-local-standard ENVIRONMENT=local
-	$(MAKE) run-islandora-migrations ENVIRONMENT=local
-	docker-compose exec -T drupal with-contenv bash -lc "composer require mjordan/islandora_workbench_integration"
-	docker-compose exec -T drupal with-contenv bash -lc "drush en -y islandora_workbench_integration"
 
 .PHONY: initial_content
 initial_content:
