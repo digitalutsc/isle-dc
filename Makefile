@@ -402,25 +402,21 @@ local-install-profile: generate-secrets
 .PHONY: local-standard
 .SILENT: local-standard
 local-standard: generate-secrets
-	$(MAKE) download-default-certs
-	php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-	if [ `wget -q -O - https://composer.github.io/installer.sig` != `php -r "echo hash_file('sha384', 'composer-setup.php');"` ]; then \
-		>&2 echo 'ERROR: Invalid installer checksum'; \
-		rm composer-setup.php; \
-		exit 1; \
-	fi
-	php composer-setup.php --quiet
-	rm composer-setup.php
-	if [ ! -d ./codebase ]; then \
-		git clone -b 2_x_update https://github.com/Natkeeran/islandora-sandbox.git codebase; \
-	fi
-	(cd codebase && php ../composer.phar update)
-	$(MAKE) set-files-owner SRC=$(CURDIR)/codebase
+	$(MAKE) download-default-certs ENVIROMENT=local
 	$(MAKE) -B docker-compose.yml ENVIRONMENT=local
-	docker-compose up -d
+	$(MAKE) pull ENVIRONMENT=local
+	mkdir -p $(CURDIR)/codebase
+	if [ -z "$$(ls -A $(CURDIR)/codebase)" ]; then \
+		docker container run --rm -v $(CURDIR)/codebase:/home/root $(REPOSITORY)/nginx:$(TAG) with-contenv bash -lc 'git clone -b 2_x_update https://github.com/Natkeeran/islandora-sandbox /tmp/codebase; mv /tmp/codebase/* /home/root;'; \
+	fi
+	$(MAKE) set-files-owner SRC=$(CURDIR)/codebase ENVIROMENT=local
+	docker-compose up -d --remove-orphans
+	docker-compose exec -T drupal with-contenv bash -lc 'composer install; chown -R nginx:nginx .'
+
 	$(MAKE) install ENVIRONMENT=local
 	$(MAKE) hydrate ENVIRONMENT=local
 	$(MAKE) hydrate-local-standard ENVIRONMENT=local
+	docker-compose exec -T drupal with-contenv bash -lc 'drush --root /var/www/drupal/web -l $${DRUPAL_DEFAULT_SITE_URL} upwd admin $${DRUPAL_DEFAULT_ACCOUNT_PASSWORD}'
 	$(MAKE) run-islandora-migrations ENVIRONMENT=local
 	docker-compose exec -T drupal with-contenv bash -lc "composer require mjordan/islandora_workbench_integration"
 	docker-compose exec -T drupal with-contenv bash -lc "drush en -y islandora_workbench_integration"
