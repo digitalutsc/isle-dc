@@ -414,7 +414,7 @@ local-standard: generate-secrets
 	if [ ! -d ./codebase ]; then \
 		git clone -b islandora_lite https://github.com/Natkeeran/islandora-sandbox.git codebase; \
 	fi
-	(cd codebase && php ../composer.phar update)
+	(cd codebase && php ../composer.phar clear-cache && php ../composer.phar update)
 	$(MAKE) set-files-owner SRC=$(CURDIR)/codebase
 	$(MAKE) -B docker-compose.yml ENVIRONMENT=local
 	docker-compose up -d
