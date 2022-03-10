@@ -173,7 +173,7 @@ hydrate: update-settings-php update-config-from-environment solr-cores namespace
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_search_api_solr_module"
 	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable search_api_solr_defaults
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites create_solr_core_with_default_config"
-	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable responsive_image syslog devel admin_toolbar pdf matomo restui controlled_access_terms_defaults jsonld field_group field_permissions features file_entity view_mode_switch replaywebpage islandora_defaults islandora_marc_countries fico fico_taxonomy_condition openseadragon ableplayer csvfile_formatter archive_list_contents islandora_iiif islandora_display advanced_search media_thumbnails media_thumbnails_pdf media_thumbnails_video
+	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable responsive_image syslog devel admin_toolbar pdf matomo restui controlled_access_terms_defaults jsonld field_group field_permissions features file_entity view_mode_switch islandora_defaults islandora_marc_countries chart_suite openseadragon chart_suite ableplayer islandora_iiif islandora_display islandora_advanced_search media_thumbnails media_thumbnails_pdf media_thumbnails_video
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_islandora_default_module"
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_matomo_module"
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_openseadragon"
@@ -414,13 +414,25 @@ local-standard: generate-secrets
 	if [ ! -d ./codebase ]; then \
 		git clone -b islandora_lite https://github.com/Natkeeran/islandora-sandbox.git codebase; \
 	fi
-	(cd codebase && php ../composer.phar clear-cache && php ../composer.phar update)
+	(cd codebase && php ../composer.phar update)
 	$(MAKE) set-files-owner SRC=$(CURDIR)/codebase
 	$(MAKE) -B docker-compose.yml ENVIRONMENT=local
 	docker-compose up -d
 	docker-compose run drupal apk add php7-imagick
 	$(MAKE) install ENVIRONMENT=local
 	$(MAKE) hydrate-local-standard ENVIRONMENT=local
+	docker-compose exec -T drupal with-contenv bash -lc 'drush -y migrate:import --group=islandora'
+
+.PHONY: post-install-scripts
+.SILENT: post-install-scripts
+post-install-scripts:
+	wget https://raw.githubusercontent.com/digitalutsc/isle-dc/islandora_lite/scripts/post-processing.sh -P codebase/
+	chmod +x codebase/post-processing.sh
+	docker-compose exec -T drupal with-contenv bash -lc "./post-processing.sh"
+
+	wget https://www.drupal.org/files/issues/2022-02-10/deprecated-3084136-3.patch -P codebase/web/modules/contrib/fico_taxonomy_condition
+	cd codebase/web/modules/contrib/fico_taxonomy_condition
+	patch -R -p1 < deprecated-3084136-3.patch
 
 .PHONY: initial_content
 initial_content:
