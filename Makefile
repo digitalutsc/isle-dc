@@ -421,7 +421,7 @@ local-standard: generate-secrets
 	docker-compose run drupal apk add php7-imagick
 	$(MAKE) install ENVIRONMENT=local
 	$(MAKE) hydrate-local-standard ENVIRONMENT=local
-	docker-compose exec -T drupal with-contenv bash -lc 'drush -y migrate:import --group=islandora'
+	#docker-compose exec -T drupal with-contenv bash -lc 'drush -y migrate:import --group=islandora'
 
 .PHONY: post-install-scripts
 .SILENT: post-install-scripts
