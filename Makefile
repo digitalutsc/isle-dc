@@ -431,7 +431,7 @@ post-install-scripts:
 	docker-compose exec -T drupal with-contenv bash -lc "./post-processing.sh"
 
 	wget https://www.drupal.org/files/issues/2022-02-10/deprecated-3084136-3.patch -P codebase/web/modules/contrib/fico
-	(cd codebase/web/modules/contrib/fico && patch -R -p1 < deprecated-3084136-3.patch)
+	(cd codebase/web/modules/contrib/fico && patch -p1 < deprecated-3084136-3.patch)
 
 .PHONY: initial_content
 initial_content:
