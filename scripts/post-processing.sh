@@ -28,6 +28,9 @@ drush -y config:set field.field.media.audio.field_media_audio_file settings.file
 # not sure where to set this in isle-dc
 drush -y config:set search_api.server.default_solr_server backend_config.connector_config.core ISLANDORA
 
+# set front page
+drush -y config:set system.site page.front "/collections"
+
 drush -y --input-format=yaml config:set core.entity_form_display.media.audio.media_library content "
 ableplayer_caption:
   type: file_generic
