@@ -23,7 +23,7 @@ drush -y --input-format=yaml config:set file_entity.type.image mimetypes "
 
 drush -y config:set field.field.media.document.field_media_document settings.file_extensions "txt rtf doc docx ppt pptx xls xlsx pdf odf odg odp ods odt fodt fods fodp fodg key numbers pages csv vtt"
 drush -y config:set field.field.media.image.field_media_image settings.file_extensions "png gif jpg jpeg tif tiff jp2"
-
+drush -y config:set field.field.media.audio.field_media_audio_file settings.file_extensions "mp3 wav aac m4a"
 
 drush -y --input-format=yaml config:set core.entity_form_display.media.audio.media_library content "
 ableplayer_caption:
