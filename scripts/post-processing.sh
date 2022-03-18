@@ -25,6 +25,9 @@ drush -y config:set field.field.media.document.field_media_document settings.fil
 drush -y config:set field.field.media.image.field_media_image settings.file_extensions "png gif jpg jpeg tif tiff jp2"
 drush -y config:set field.field.media.audio.field_media_audio_file settings.file_extensions "mp3 wav aac m4a"
 
+# not sure where to set this in isle-dc
+drush -y config:set search_api.server.default_solr_server backend_config.connector_config.core ISLANDORA
+
 drush -y --input-format=yaml config:set core.entity_form_display.media.audio.media_library content "
 ableplayer_caption:
   type: file_generic
