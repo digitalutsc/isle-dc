@@ -1,0 +1,23 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - basic_auth
+    - jsonld
+    - media
+    - serialization
+id: entity.media
+plugin_id: 'entity:media'
+granularity: resource
+configuration:
+  methods:
+    - GET
+    - POST
+    - DELETE
+    - PATCH
+  formats:
+    - jsonld
+    - json
+  authentication:
+    - basic_auth
+

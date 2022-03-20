@@ -1,0 +1,23 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - basic_auth
+    - jsonld
+    - node
+    - serialization
+id: entity.node
+plugin_id: 'entity:node'
+granularity: resource
+configuration:
+  methods:
+    - GET
+    - POST
+    - DELETE
+    - PATCH
+  formats:
+    - jsonld
+    - json
+  authentication:
+    - basic_auth
+
