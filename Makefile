@@ -173,7 +173,7 @@ hydrate: update-settings-php update-config-from-environment solr-cores namespace
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_search_api_solr_module"
 	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable search_api_solr_defaults
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites create_solr_core_with_default_config"
-	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable responsive_image syslog devel admin_toolbar pdf matomo restui controlled_access_terms_defaults jsonld field_group field_permissions features file_entity view_mode_switch replaywebpage islandora_defaults islandora_marc_countries fico fico_taxonomy_condition openseadragon ableplayer csvfile_formatter archive_list_contents islandora_iiif islandora_display advanced_search media_thumbnails media_thumbnails_pdf media_thumbnails_video media_library_edit migrate_source_csv migrate_tools basic_auth islandora_lite_solr_search islandora_mirador
+	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable responsive_image syslog devel admin_toolbar pdf matomo restui controlled_access_terms_defaults jsonld field_group field_permissions features file_entity view_mode_switch replaywebpage islandora_defaults islandora_marc_countries fico fico_taxonomy_condition openseadragon ableplayer csvfile_formatter archive_list_contents islandora_iiif islandora_display advanced_search media_thumbnails media_thumbnails_pdf media_thumbnails_video media_library_edit migrate_source_csv migrate_tools basic_auth islandora_lite_solr_search islandora_mirador term_condition
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_islandora_default_module"
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_matomo_module"
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_openseadragon"
@@ -427,23 +427,24 @@ local-standard: generate-secrets
 .PHONY: post-install-scripts
 .SILENT: post-install-scripts
 post-install-scripts:
-	wget https://raw.githubusercontent.com/digitalutsc/isle-dc/islandora_lite/scripts/post-processing.sh -P codebase/
-	chmod +x codebase/post-processing.sh
-	docker-compose exec -T drupal with-contenv bash -lc "./post-processing.sh"
+	cd $(CURDIR)
+	rm -rf  islandora_lite_installation
+	git clone https://github.com/digitalutsc/islandora_lite_installation
+	rm -rf codebase/islandora_lite_installation
+	mv islandora_lite_installation codebase/islandora_lite_installation
+
+	chmod +x codebase/islandora_lite_installation/scripts/post-processing.sh
+	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/post-processing.sh"
 
 	wget https://www.drupal.org/files/issues/2022-02-10/deprecated-3084136-3.patch -P codebase/web/modules/contrib/fico
-	(cd codebase/web/modules/contrib/fico && patch -p1 < deprecated-3084136-3.patch)
+	-(cd codebase/web/modules/contrib/fico && patch --forward -p1 < deprecated-3084136-3.patch)
 
-	wget https://raw.githubusercontent.com/digitalutsc/isle-dc/islandora_lite/scripts/workbench_integration.patch -P codebase/web/modules/contrib/islandora_workbench_integration
-	(cd codebase/web/modules/contrib/islandora_workbench_integration && patch -p1 < workbench_integration.patch)
+	cp codebase/islandora_lite_installation/patches/workbench_integration.patch codebase/web/modules/contrib/islandora_workbench_integration/
+	-(cd codebase/web/modules/contrib/islandora_workbench_integration && patch --forward -p1 < workbench_integration.patch)
 	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable islandora_workbench_integration
 
 	# required for workbench
-	mkdir codebase/rest_config
-	wget https://raw.githubusercontent.com/digitalutsc/isle-dc/islandora_lite/scripts/rest_config/rest.resource.entity.media.yml -P codebase/rest_config
-	wget https://raw.githubusercontent.com/digitalutsc/isle-dc/islandora_lite/scripts/rest_config/rest.resource.entity.node.yml -P codebase/rest_config
-	wget https://raw.githubusercontent.com/digitalutsc/isle-dc/islandora_lite/scripts/rest_config/rest.resource.entity.taxonomy_term.yml -P codebase/rest_config
-	-docker-compose exec -T drupal drush -y config-import --partial --source /var/www/drupal/rest_config
+	-docker-compose exec -T drupal drush -y config-import --partial --source /var/www/drupal/islandora_lite_installation/configs/rest_config
 
   # imagick does not come with the container
 	docker-compose exec -T drupal apk --update add php7-imagick
@@ -451,19 +452,19 @@ post-install-scripts:
 	docker restart isle-dc_drupal_1
 	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable media_thumbnails_tiff
 
+  # ffmpeg needed to create TNs
+	docker-compose exec -T drupal apk --update add ffmpeg
+	-docker-compose exec -T drupal drush -y config:set media_thumbnails_video.settings ffmpeg /usr/bin/ffmpeg
+	-docker-compose exec -T drupal drush -y config:set media_thumbnails_video.settings ffprobe /usr/bin/ffprobe
+
 DRUPAL_THEME = olivero
 .PHONY: block-placements
 .SILENT: block-placements
 block-placements:
 	docker-compose exec -T drupal apk add jq
-	-docker-compose exec -T drupal drush -y config-import --partial --source /var/www/drupal/islandora_lite_installation/configs/blocks_$(DRUPAL_THEME)
+	docker-compose exec -T drupal drush -y config-import --partial --source /var/www/drupal/islandora_lite_installation/configs/blocks_$(DRUPAL_THEME)
 	chmod +x codebase/islandora_lite_installation/scripts/block_update.py
 	-docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/block_update.py $(DOMAIN) password"
-
-  # ffmpeg needed to create TNs
-	docker-compose exec -T drupal apk --update add ffmpeg
-	-docker-compose exec -T drupal drush -y config:set media_thumbnails_video.settings ffmpeg /usr/bin/ffmpeg
-	-docker-compose exec -T drupal drush -y config:set media_thumbnails_video.settings ffprobe /usr/bin/ffprobe
 
 .PHONY: initial_content
 initial_content:
