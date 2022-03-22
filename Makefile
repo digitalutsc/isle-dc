@@ -436,6 +436,14 @@ post-install-scripts:
 	chmod +x codebase/islandora_lite_installation/scripts/post-processing.sh
 	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/post-processing.sh"
 
+	# Kyle added: Run scripts for setting up micro-services 
+	chmod +x codebase/islandora_lite_installation/scripts/micro_services.sh
+	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/micro_services.sh"
+
+	# Kyle added: Run scripts for setting up access control
+	chmod +x codebase/islandora_lite_installation/scripts/micro_services.sh
+	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/access_control.sh"
+
 	wget https://www.drupal.org/files/issues/2022-02-10/deprecated-3084136-3.patch -P codebase/web/modules/contrib/fico
 	-(cd codebase/web/modules/contrib/fico && patch --forward -p1 < deprecated-3084136-3.patch)
 
@@ -446,13 +454,13 @@ post-install-scripts:
 	# required for workbench
 	-docker-compose exec -T drupal drush -y config-import --partial --source /var/www/drupal/islandora_lite_installation/configs/rest_config
 
-  # imagick does not come with the container
+	# imagick does not come with the container
 	docker-compose exec -T drupal apk --update add php7-imagick
 	docker-compose exec -T drupal apk --update add imagemagick
 	docker restart isle-dc_drupal_1
 	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable media_thumbnails_tiff
 
-  # ffmpeg needed to create TNs
+	# ffmpeg needed to create TNs
 	docker-compose exec -T drupal apk --update add ffmpeg
 	-docker-compose exec -T drupal drush -y config:set media_thumbnails_video.settings ffmpeg /usr/bin/ffmpeg
 	-docker-compose exec -T drupal drush -y config:set media_thumbnails_video.settings ffprobe /usr/bin/ffprobe
