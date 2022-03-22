@@ -441,7 +441,7 @@ post-install-scripts:
 	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/micro_services.sh"
 
 	# Kyle added: Run scripts for setting up access control
-	chmod +x codebase/islandora_lite_installation/scripts/micro_services.sh
+	chmod +x codebase/islandora_lite_installation/scripts/access_control.sh
 	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/access_control.sh"
 
 	wget https://www.drupal.org/files/issues/2022-02-10/deprecated-3084136-3.patch -P codebase/web/modules/contrib/fico
