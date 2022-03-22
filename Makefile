@@ -438,7 +438,7 @@ post-install-scripts:
 
 	# Kyle added: Run scripts for setting up micro-services 
 	chmod +x codebase/islandora_lite_installation/scripts/micro_services.sh
-	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/micro_services.sh"
+	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/micro_services.sh docker"
 
 	# Kyle added: Run scripts for setting up access control
 	chmod +x codebase/islandora_lite_installation/scripts/access_control.sh
