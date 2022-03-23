@@ -463,6 +463,7 @@ post-install-scripts:
 
 	# Kyle added: setup configuration private file system
 	sudo mkdir codebase/web/sites/default/private_files
+	sudo chmod "$USER":101 codebase/web/sites/default/private_files
 	cd codebase/web/sites/default 
 	sudo chmod 777 codebase/web/sites/default
 	docker-compose exec -T drupal sed -i "/file_private_path/c\$settings['file_private_path'] = 'sites/default/private_files';" /var/www/drupal/web/sites/default/settings.php  
