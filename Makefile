@@ -466,10 +466,12 @@ post-install-scripts:
 	current_user=$(whoami)
 	sudo chown "${current_user}":101 codebase/web/sites/default/private_files
 	cd codebase/web/sites/default 
+	sudo chmod 777 codebase/web/sites/default
 	sudo chmod 777 codebase/web/sites/default/settings.php  
 	docker-compose exec -T drupal sed -i "/file_private_path/c\$$settings['file_private_path'] = 'sites/default/private_files';" /var/www/drupal/web/sites/default/settings.php 
 	sudo chmod 444 codebase/web/sites/default/settings.php  
-
+	sudo chmod 744 codebase/web/sites/default
+	
 	# Kyle added: Run scripts for setting up access control
 	chmod +x codebase/islandora_lite_installation/scripts/access_control.sh
 	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/access_control.sh"
