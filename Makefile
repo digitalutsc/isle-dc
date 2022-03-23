@@ -467,7 +467,7 @@ post-install-scripts:
 	sudo chown "${current_user}":101 codebase/web/sites/default/private_files
 	cd codebase/web/sites/default 
 	sudo chmod 777 codebase/web/sites/default/settings.php  
-	docker-compose exec -T drupal sed -i "/file_private_path/c\$settings['file_private_path'] = 'sites/default/private_files';" /var/www/drupal/web/sites/default/settings.php 
+	docker-compose exec -T drupal sed -i "/file_private_path/c\$$settings['file_private_path'] = 'sites/default/private_files';" /var/www/drupal/web/sites/default/settings.php 
 	sudo chmod 444 codebase/web/sites/default/settings.php  
 
 	# Kyle added: Run scripts for setting up access control
