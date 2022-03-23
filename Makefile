@@ -436,14 +436,6 @@ post-install-scripts:
 	chmod +x codebase/islandora_lite_installation/scripts/post-processing.sh
 	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/post-processing.sh"
 
-	# Kyle added: Run scripts for setting up micro-services 
-	chmod +x codebase/islandora_lite_installation/scripts/micro_services.sh
-	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/micro_services.sh docker"
-
-	# Kyle added: Run scripts for setting up access control
-	chmod +x codebase/islandora_lite_installation/scripts/access_control.sh
-	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/access_control.sh"
-
 	wget https://www.drupal.org/files/issues/2022-02-10/deprecated-3084136-3.patch -P codebase/web/modules/contrib/fico
 	-(cd codebase/web/modules/contrib/fico && patch --forward -p1 < deprecated-3084136-3.patch)
 
@@ -464,6 +456,25 @@ post-install-scripts:
 	docker-compose exec -T drupal apk --update add ffmpeg
 	-docker-compose exec -T drupal drush -y config:set media_thumbnails_video.settings ffmpeg /usr/bin/ffmpeg
 	-docker-compose exec -T drupal drush -y config:set media_thumbnails_video.settings ffprobe /usr/bin/ffprobe
+
+	# Kyle added: Run scripts for setting up micro-services 
+	chmod +x codebase/islandora_lite_installation/scripts/micro_services.sh
+	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/micro_services.sh docker"
+
+	# Kyle added: setup configuration private file system
+	sudo mkdir codebase/web/sites/default/private_files
+	cd codebase/web/sites/default 
+	sudo chmod 777 codebase/web/sites/default
+	docker-compose exec -T drupal sed -i "/file_private_path/c\$settings['file_private_path'] = 'sites/default/private_files';" /var/www/drupal/web/sites/default/settings.php  
+	sudo chmod 744 codebase/web/sites/default
+
+	# Kyle added: Run scripts for setting up access control
+	chmod +x codebase/islandora_lite_installation/scripts/access_control.sh
+	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/access_control.sh"
+
+	# kyle added: setup configs for advanced search
+	chmod +x codebase/islandora_lite_installation/scripts/advanced_search.sh
+	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/advanced_search.sh"
 
 DRUPAL_THEME = olivero
 .PHONY: block-placements
