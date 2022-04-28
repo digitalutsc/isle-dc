@@ -433,18 +433,11 @@ post-install-scripts:
 	rm -rf codebase/islandora_lite_installation
 	mv islandora_lite_installation codebase/islandora_lite_installation
 
-	chmod +x codebase/islandora_lite_installation/scripts/post-processing.sh
+	chmod +x codebase/islandora_lite_installation/scripts/*.*
 	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/post-processing.sh"
-
-	wget https://www.drupal.org/files/issues/2022-02-10/deprecated-3084136-3.patch -P codebase/web/modules/contrib/fico
-	-(cd codebase/web/modules/contrib/fico && patch --forward -p1 < deprecated-3084136-3.patch)
-
-	cp codebase/islandora_lite_installation/patches/workbench_integration.patch codebase/web/modules/contrib/islandora_workbench_integration/
-	-(cd codebase/web/modules/contrib/islandora_workbench_integration && patch --forward -p1 < workbench_integration.patch)
-	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable islandora_workbench_integration
-
-	# required for workbench
-	-docker-compose exec -T drupal drush -y config-import --partial --source /var/www/drupal/islandora_lite_installation/configs/rest_config
+	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/patches.sh"
+	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/micro_services.sh docker"
+	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/partial_config_sych.sh"
 
 	# imagick does not come with the container
 	docker-compose exec -T drupal apk --update add php7-imagick
@@ -457,28 +450,8 @@ post-install-scripts:
 	-docker-compose exec -T drupal drush -y config:set media_thumbnails_video.settings ffmpeg /usr/bin/ffmpeg
 	-docker-compose exec -T drupal drush -y config:set media_thumbnails_video.settings ffprobe /usr/bin/ffprobe
 
-	# Kyle added: Run scripts for setting up micro-services 
-	chmod +x codebase/islandora_lite_installation/scripts/micro_services.sh
-	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/micro_services.sh docker"
-
-	# Kyle added: setup configuration private file system
-	sudo mkdir codebase/web/sites/default/private_files
-	current_user=$(whoami)
-	sudo chown "${current_user}":101 codebase/web/sites/default/private_files
-	cd codebase/web/sites/default 
-	sudo chmod 777 codebase/web/sites/default
-	sudo chmod 777 codebase/web/sites/default/settings.php  
-	docker-compose exec -T drupal sed -i "/file_private_path/c\$$settings['file_private_path'] = 'sites/default/private_files';" /var/www/drupal/web/sites/default/settings.php 
-	sudo chmod 444 codebase/web/sites/default/settings.php  
-	sudo chmod 744 codebase/web/sites/default
-	
 	# Kyle added: Run scripts for setting up access control
-	chmod +x codebase/islandora_lite_installation/scripts/access_control.sh
-	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/access_control.sh"
-
-	# kyle added: setup configs for advanced search
-	chmod +x codebase/islandora_lite_installation/scripts/advanced_search.sh
-	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/advanced_search.sh"
+	#docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/access_control.sh"
 
 DRUPAL_THEME = olivero
 .PHONY: block-placements
