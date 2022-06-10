@@ -462,6 +462,45 @@ block-placements:
 	chmod +x codebase/islandora_lite_installation/scripts/block_update.py
 	-docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/block_update.py $(DOMAIN) password"
 
+DSU_THEME = barriodepartments
+.PHONY: deploy-dsu-theme
+.SILENT: deploy-dsu-theme
+deploy-dsu-theme: 
+	cd $(CURDIR)
+	rm -rf  dsu_sites_config
+	git clone -b exported_doris https://github.com/digitalutsc/dsu_sites_config
+	rm -rf codebase/dsu_sites_config
+	mv dsu_sites_config codebase/dsu_sites_config
+
+	# Download utsc logo 
+	docker-compose exec -T drupal wget -P /var/www/drupal/web/sites/default/files https://digital.utsc.utoronto.ca/sites/default/files/logo.svg 
+
+	# Assume ssh-key is setup, and be able to download private github repo
+	#docker-compose exec drupal bash -lc "git clone --quiet --branch doris https://github.com/digitalutsc/dsu_subtheme_barrioDepartments.git /var/www/drupal/web/themes/contrib/dsu_subtheme_barrioDepartments"
+
+	cd $(CURDIR)
+	rm -rf  codebase/web/themes/contrib/dsu_subtheme_barrioDepartments 2> /dev/null
+	git clone -b doris git@github.com:digitalutsc/dsu_subtheme_barrioDepartments.git codebase/web/themes/contrib/dsu_subtheme_barrioDepartments
+	
+	# clear cache
+	docker-compose exec -T drupal drush cr
+
+	# enable theme
+	docker-compose exec -T drupal drush -y then $(DSU_THEME)
+	docker-compose exec -T drupal drush -y config-set system.theme default $(DSU_THEME)
+
+	# enable theme settings
+	docker-compose exec -T drupal drush -y config-import --partial --source=/var/www/drupal/dsu_sites_config/all/themes
+
+	# import custom blocks
+	docker-compose exec -T drupal drush ib
+
+	# enable blocks 
+	docker-compose exec -T drupal drush -y config-import --partial --source=/var/www/drupal/dsu_sites_config/all/blocks
+
+	# clear cache
+	docker-compose exec -T drupal drush cr
+
 .PHONY: initial_content
 initial_content:
 	curl -u admin:$(shell cat secrets/live/DRUPAL_DEFAULT_ACCOUNT_PASSWORD) -H "Content-Type: application/json" -d "@demo-data/homepage.json" https://${DOMAIN}/node?_format=json
