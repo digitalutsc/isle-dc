@@ -461,20 +461,7 @@ block-placements:
 	docker-compose exec -T drupal drush -y config-import --partial --source /var/www/drupal/islandora_lite_installation/configs/blocks_$(DRUPAL_THEME)
 	chmod +x codebase/islandora_lite_installation/scripts/block_update.py
 	-docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/block_update.py $(DOMAIN) password"
-
-DSU_THEME = barriodepartments
-.PHONY: deploy-dsu-theme
-.SILENT: deploy-dsu-theme
-deploy-dsu-theme: 
-
-	cd $(CURDIR)
-	rm -rf  codebase/web/themes/contrib/dsu_subtheme_barrioDepartments 2> /dev/null
-	git clone -b doris git@github.com:digitalutsc/dsu_subtheme_barrioDepartments.git codebase/web/themes/contrib/dsu_subtheme_barrioDepartments
 	
-	# run install theme script
-	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/install_theme.sh"
-	
-
 .PHONY: initial_content
 initial_content:
 	curl -u admin:$(shell cat secrets/live/DRUPAL_DEFAULT_ACCOUNT_PASSWORD) -H "Content-Type: application/json" -d "@demo-data/homepage.json" https://${DOMAIN}/node?_format=json
