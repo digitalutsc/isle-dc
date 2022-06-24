@@ -433,6 +433,9 @@ post-install-scripts:
 	rm -rf codebase/islandora_lite_installation
 	mv islandora_lite_installation codebase/islandora_lite_installation
 
+        #add to fix issue of failure run Advanced Queue Runner
+	docker-compose exec -T drupal apk add jq
+	
 	chmod +x codebase/islandora_lite_installation/scripts/*.*
 	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/post-processing.sh"
 	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/patches.sh"
