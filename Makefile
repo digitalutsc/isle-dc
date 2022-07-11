@@ -171,7 +171,6 @@ hydrate: update-settings-php update-config-from-environment solr-cores namespace
 .SILENT: hydrate-local-standard
  hydrate-local-standard:  update-settings-php solr-cores namespaces
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_search_api_solr_module"
-	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable search_api_solr_defaults
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites create_solr_core_with_default_config"
 	-docker-compose exec -T drupal drush -l $(SITE) -y pm:enable responsive_image syslog devel admin_toolbar pdf matomo restui controlled_access_terms_defaults jsonld field_group field_permissions features file_entity view_mode_switch replaywebpage islandora_defaults islandora_marc_countries fico fico_taxonomy_condition openseadragon ableplayer csvfile_formatter archive_list_contents islandora_iiif islandora_display advanced_search media_thumbnails media_thumbnails_pdf media_thumbnails_video media_library_edit migrate_source_csv migrate_tools basic_auth islandora_lite_solr_search islandora_mirador term_condition filemime views_flipped_table islandora_breadcrumbs rest_oai_pmh citation_select asset_injector better_social_sharing_buttons structure_sync islandora_search_processor facets_year_range views_nested_details
 	-docker-compose exec -T drupal with-contenv bash -lc "for_all_sites configure_islandora_default_module"
