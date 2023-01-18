@@ -10,7 +10,7 @@ networks:
     external: true
 secrets:
   CODE_SERVER_PASSWORD:
-    file: "./secrets/CODE_SERVER_PASSWORD"
+    file: "../../secrets/live/CODE_SERVER_PASSWORD"
 services:
   code-server:
     environment:
@@ -21,7 +21,7 @@ services:
     restart: ${RESTART_POLICY:-unless-stopped}
     image: ${REPOSITORY:-islandora}/code-server:${TAG:-latest}
     labels:
-      - traefik.enable=true
+      - traefik.enable=${EXPOSE_CODE_SERVER:-false}
       # code-server  
       - traefik.http.services.${COMPOSE_PROJECT_NAME-isle-dc}-code-server.loadbalancer.server.port=8443
       - traefik.http.routers.${COMPOSE_PROJECT_NAME-isle-dc}-code-server_https.service=${COMPOSE_PROJECT_NAME-isle-dc}-code-server
@@ -62,6 +62,12 @@ services:
       gateway:
     depends_on:
       - drupal
+    deploy:
+      resources:
+          limits:
+            memory: ${IDE_MEMORY_LIMIT:-5G}
+          reservations:
+            memory: 2G
   drupal:
     environment:
       PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT}
@@ -74,6 +80,12 @@ services:
     volumes:
       # Allow code-server to serve Drupal / override it.
       - drupal-root:/var/www/drupal
+    deploy:
+      resources:
+          limits:
+            memory: ${DRUPAL_MEMORY_LIMIT:-5G}
+          reservations:
+            memory: 2G
 volumes:
   drupal-root: {}
   drupal-sites-data: {}
