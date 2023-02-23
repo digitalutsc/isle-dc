@@ -440,7 +440,6 @@ post-install-scripts:
 	
 	chmod +x codebase/islandora_lite_installation/scripts/*.*
 	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/post-processing.sh"
-	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/patches.sh"
 	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/micro_services.sh docker"
 	docker-compose exec -T drupal with-contenv bash -lc "islandora_lite_installation/scripts/partial_config_sych.sh"
 
