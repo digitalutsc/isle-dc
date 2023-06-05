@@ -41,6 +41,14 @@ Additionally, there's a couple other targets derived from `local` which make use
 On top of that, there's a lot of useful commands for managing an Islandora instance, such
 as database import/export and reindexing.
 
+## Islandora Lite (New)
+
+- **lite_dev**: Creates a clone of the starter site project, intended for development of the "Islandora Lite".
+
+````
+make lite_dev
+````
+
 ## Requirements
 
 - Desktop / laptop / VM (*Docker must have sufficient resources to run GNU Make*)
