@@ -26,7 +26,7 @@ lite_dev: QUOTED_CURDIR = "$(CURDIR)"
 lite_dev: generate-secrets
 	$(MAKE) lite-init ENVIRONMENT=local
 	if [ -z "$$(ls -A $(QUOTED_CURDIR)/codebase)" ]; then \
-		docker container run --rm -v $(CURDIR)/codebase:/home/root $(REPOSITORY)/nginx:$(TAG) with-contenv bash -lc 'git clone https://github.com/digitalutsc/islandora-sandbox.git --branch 1.0.0-beta1 /home/root;'; \
+		docker container run --rm -v $(CURDIR)/codebase:/home/root $(REPOSITORY)/nginx:$(TAG) with-contenv bash -lc 'git clone -b access_control https://github.com/digitalutsc/islandora-sandbox.git /home/root;'; \
 	fi
 	$(MAKE) set-files-owner SRC=$(CURDIR)/codebase ENVIRONMENT=local
 	docker-compose up -d --remove-orphans
@@ -42,6 +42,9 @@ lite_dev: generate-secrets
 	-docker-compose exec -T drupal drush -y config:set media_thumbnails_video.settings ffprobe /usr/bin/ffprobe
 	docker-compose restart drupal
 
+	# create private file directory
+	docker-compose exec -T drupal mkdir -p $(CURDIR)/codebase/web/sites/default/private_files
+
 	# install the site
 	docker-compose exec -T drupal with-contenv bash -lc 'composer install'
 	$(MAKE) lite-finalize ENVIRONMENT=local
@@ -51,6 +54,7 @@ lite-finalize:
 	docker-compose exec -T drupal with-contenv bash -lc 'chown -R nginx:nginx .'
 	$(MAKE) drupal-database update-settings-php
 	docker-compose exec -T drupal with-contenv bash -lc "drush si -y --existing-config minimal --account-pass '$(shell cat secrets/live/DRUPAL_DEFAULT_ACCOUNT_PASSWORD)'"
+	docker-compose exec -T drupal with-contenv bash -lc "drush -l $(SITE) user:role:add administrator admin"
 	MIGRATE_IMPORT_USER_OPTION=--userid=1 $(MAKE) lite_hydrate
 	$(MAKE) login
 
