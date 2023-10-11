@@ -58,8 +58,7 @@ lite_dev: generate-secrets
 
 .PHONY: lite-finalize
 lite-finalize:
-	#docker-compose exec -T drupal with-contenv bash -lc 'chown -R nginx:nginx .'
-	docker-compose exec -T drupal with-contenv bash -lc 'chown -R nginx:nginx /var/www/drupal/web/sites/default/files'
+	docker-compose exec -T drupal with-contenv bash -lc 'chown -R nginx:nginx .'	
 	$(MAKE) drupal-database update-settings-php
 	docker-compose exec -T drupal with-contenv bash -lc "drush si -y --existing-config minimal --account-pass '$(shell cat secrets/live/DRUPAL_DEFAULT_ACCOUNT_PASSWORD)'"
 	docker-compose exec -T drupal with-contenv bash -lc "drush -l $(SITE) user:role:add administrator admin"
