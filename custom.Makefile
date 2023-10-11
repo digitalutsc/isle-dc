@@ -52,9 +52,6 @@ lite_dev: generate-secrets
 	-docker-compose exec -T drupal drush -y config:set media_thumbnails_video.settings ffprobe /usr/bin/ffprobe
 	docker-compose restart drupal
 
-	# create private file directory
-	docker-compose exec -T drupal mkdir -p $(CURDIR)/codebase/web/sites/default/private_files
-
 	# install the site
 	docker-compose exec -T drupal with-contenv bash -lc 'composer install --prefer-dist'
 	$(MAKE) lite-finalize ENVIRONMENT=local
