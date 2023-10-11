@@ -14,10 +14,20 @@ run-lite-migrations:
 	# has been updated to match
 	docker-compose exec -T drupal with-contenv bash -lc 'drush -l $(SITE) migrate:import islandora_tags'
 
+.PHONY: update-config-from-lite-environment
+## Updates configuration from environment variables.
+## Allow all commands to fail as the user may not have all the modules like matomo, etc.
+.SILENT: update-config-from-lite-environment
+update-config-from-lite-environment:
+	-docker compose exec -T drupal with-contenv bash -lc "for_all_sites configure_jwt_module"
+	-docker compose exec -T drupal with-contenv bash -lc "for_all_sites configure_search_api_solr_module"
+	-docker compose exec -T drupal with-contenv bash -lc "for_all_sites configure_matomo_module"
+	-docker compose exec -T drupal with-contenv bash -lc "for_all_sites configure_openseadragon"
+
 .PHONY: lite_hydrate
 .SILENT: lite_hydrate
 ## Reconstitute the site from environment variables.
-lite_hydrate: update-settings-php update-config-from-environment solr-cores namespaces run-lite-migrations
+lite_hydrate: update-settings-php update-config-from-lite-environment solr-cores namespaces run-lite-migrations
 	docker-compose exec -T drupal drush cr -y
 
 .PHONY: lite_dev
