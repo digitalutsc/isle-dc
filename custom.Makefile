@@ -26,7 +26,7 @@ lite_dev: QUOTED_CURDIR = "$(CURDIR)"
 lite_dev: generate-secrets
 	$(MAKE) lite-init ENVIRONMENT=local
 	if [ -z "$$(ls -A $(QUOTED_CURDIR)/codebase)" ]; then \
-		docker container run --rm -v $(CURDIR)/codebase:/home/root $(REPOSITORY)/nginx:$(TAG) with-contenv bash -lc 'git clone -b config_sync_context https://github.com/digitalutsc/islandora-sandbox.git /home/root;'; \
+		docker container run --rm -v $(CURDIR)/codebase:/home/root $(REPOSITORY)/nginx:$(TAG) with-contenv bash -lc 'git clone -b 1.x https://github.com/digitalutsc/islandora-lite-site.git /home/root;'; \
 	fi
 	$(MAKE) set-files-owner SRC=$(CURDIR)/codebase ENVIRONMENT=local
 	docker-compose up -d --remove-orphans
