@@ -53,7 +53,7 @@ lite_dev: generate-secrets
 	docker-compose restart drupal
 
 	# install the site
-	docker-compose exec -T drupal with-contenv bash -lc 'composer install --prefer-dist'
+	docker-compose exec -T drupal with-contenv bash -lc 'composer install'
 	$(MAKE) lite-finalize ENVIRONMENT=local
 
 .PHONY: lite-finalize
