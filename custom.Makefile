@@ -43,7 +43,7 @@ lite_dev: generate-secrets
 
 	# install imagemagick plugin
 	docker-compose exec -T drupal apk --update add imagemagick
-	docker-compose exec -T drupal apk add php81-pecl-imagick
+	docker-compose exec -T drupal apk add php82-pecl-imagick
 	docker-compose restart drupal
 
 	# install ffmpeg needed to create TNs
