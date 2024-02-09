@@ -139,3 +139,13 @@ A log of the error is needed for the fix to review. A full description of the is
 To fix this:
 
 * Run `make fix_views`
+
+## For Windows, error when executing make on trying to composer install within drupal container
+**Error:**
+```bash
+docker-compose exec -T drupal with-contenv bash -lc 'composer install'
+s6-envdir: fatal: unable to envdir: No such file or directory
+```
+To fix this:
+ * edit the Makefile and replace the `docker-compose exec -T drupal with-contenv bash -lc 'composer install'` line with `docker-compose exec -T drupal composer install`
+ * rerun make

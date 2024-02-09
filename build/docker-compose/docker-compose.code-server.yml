@@ -44,11 +44,7 @@ services:
       - CODE_SERVER_PASSWORD
     volumes:
       # Mount and serve contents of Drupal site.
-      - type: volume
-        source: drupal-root
-        target: /var/www/drupal
-        volume:
-          nocopy: true
+      - ../../codebase:/var/www/drupal:delegated
       # Mount and serve Drupal files.
       - type: volume
         source: drupal-sites-data
@@ -79,7 +75,7 @@ services:
       - traefik.enable=false
     volumes:
       # Allow code-server to serve Drupal / override it.
-      - drupal-root:/var/www/drupal
+      - ../../codebase:/var/www/drupal:delegated
     deploy:
       resources:
           limits:
