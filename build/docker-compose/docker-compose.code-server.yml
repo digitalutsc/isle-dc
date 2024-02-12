@@ -83,6 +83,5 @@ services:
           reservations:
             memory: 2G
 volumes:
-  drupal-root: {}
   drupal-sites-data: {}
   code-server-data: {}
