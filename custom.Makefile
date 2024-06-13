@@ -39,29 +39,35 @@ lite_dev: generate-secrets
 		docker container run --rm -v $(CURDIR)/codebase:/home/root $(REPOSITORY)/nginx:$(TAG) with-contenv bash -lc 'git clone -b 2.x https://github.com/digitalutsc/islandora-lite-site.git /home/root;'; \
 	fi
 	$(MAKE) set-files-owner SRC=$(CURDIR)/codebase ENVIRONMENT=local
-	docker-compose up -d --remove-orphans
+	$(MAKE) compose-up
 
 	# install imagemagick plugin
-	docker-compose exec -T drupal apk --update add imagemagick
-	docker-compose exec -T drupal apk add php82-pecl-imagick
-	docker-compose restart drupal
+	docker compose exec -T drupal with-contenv bash -lc 'apk --update add imagemagick'
+	docker compose exec -T drupal with-contenv bash -lc 'apk add php83-pecl-imagick'
 
 	# install ffmpeg needed to create TNs
-	docker-compose exec -T drupal apk --update add ffmpeg
-	-docker-compose exec -T drupal drush -y config:set media_thumbnails_video.settings ffmpeg /usr/bin/ffmpeg
-	-docker-compose exec -T drupal drush -y config:set media_thumbnails_video.settings ffprobe /usr/bin/ffprobe
+	docker compose exec -T drupal with-contenv bash -lc 'apk --update add ffmpeg'
 	docker-compose restart drupal
 
 	# install the site
-	docker-compose exec -T drupal with-contenv bash -lc 'composer install'
+	$(MAKE) compose-up
+	docker compose exec -T drupal with-contenv bash -lc 'chown -R nginx:nginx /var/www/drupal/ ; su nginx -s /bin/bash -c "composer install"'
 	$(MAKE) lite-finalize ENVIRONMENT=local
+
+	# Set config media_thumbnails_video
+	docker compose exec -T drupal with-contenv bash -lc 'drush -y config:set media_thumbnails_video.settings ffmpeg /usr/bin/ffmpeg'
+	docker compose exec -T drupal with-contenv bash -lc 'drush -y config:set media_thumbnails_video.settings ffprobe /usr/bin/ffprobe'
 
 .PHONY: lite-finalize
 lite-finalize:
-	docker-compose exec -T drupal with-contenv bash -lc 'chown -R nginx:nginx .'	
+	docker compose exec -T drupal with-contenv bash -lc 'chown -R nginx:nginx . ; echo "Chown Complete"'
 	$(MAKE) drupal-database update-settings-php
 	docker-compose exec -T drupal with-contenv bash -lc "drush si -y --existing-config minimal --account-pass '$(shell cat secrets/live/DRUPAL_DEFAULT_ACCOUNT_PASSWORD)'"
 	docker-compose exec -T drupal with-contenv bash -lc "drush -l $(SITE) user:role:add administrator admin"
+	@echo "Checking if Solr's healthy"
+	docker compose exec -T solr bash -c 'curl -s http://localhost:8983/solr/admin/info/system?wt=json' | jq -r .lucene || (echo "Solr is not healthy, waiting 10 seconds." && sleep 10)
+
 	MIGRATE_IMPORT_USER_OPTION=--userid=1 $(MAKE) lite_hydrate
 	$(MAKE) login
+	$(MAKE) wait-for-drupal-locally
 
