@@ -41,14 +41,6 @@ Additionally, there's a couple other targets derived from `local` which make use
 On top of that, there's a lot of useful commands for managing an Islandora instance, such
 as database import/export and reindexing.
 
-## Islandora Lite (New)
-
-- **lite_dev**: Creates a clone of the starter site project, intended for development of the "Islandora Lite".
-
-````
-make lite_dev
-````
-
 ## Requirements
 
 - Desktop / laptop / VM (*Docker must have sufficient resources to run GNU Make*)
@@ -102,7 +94,6 @@ the things you can do.  If you want to poke around, here's all the services that
 | Activemq    | [http://islandora.traefik.me:8161](http://islandora.traefik.me:8161)                           |         No          |
 | Solr        | [http://islandora.traefik.me:8983](http://islandora.traefik.me:8983)                           |         No          |
 | Cantaloupe  | [https://islandora.traefik.me/cantaloupe](https://islandora.traefik.me/cantaloupe)             |         Yes         |
-| Matomo      | [https://islandora.traefik.me/matomo/](https://islandora.traefik.me/matomo/)                   |         Yes         |
 | Code Server | [https://islandora.traefik.me:8443/](https://islandora.traefik.me:8443/)                       |         No          |
 
 > **Exposed**: the act of allowing the containerized application's ports to be accessible to the host machine (or public). In most cases this makes the specified URL available for the browser.
@@ -188,7 +179,7 @@ using `CUSTOM_IMAGE_TAG`
 - Run `make push-image` to push that image to your container registry
 
 For convenience a `sample.Dockerfile` is provided which `make build` will use to
-generate a custom image from the [codebase](./codebase) folder. For example if
+generate a custom image from the `codebase` folder. For example if
 you followed the guide above to create the codebase folder from the
 `islandora/demo` image.
 
