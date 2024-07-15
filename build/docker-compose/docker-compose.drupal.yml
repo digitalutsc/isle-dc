@@ -30,6 +30,7 @@ services:
       PHP_MAX_INPUT_TIME: ${PHP_MAX_EXECUTION_TIME}
       PHP_PROCESS_CONTROL_TIMEOUT: ${PHP_MAX_EXECUTION_TIME}
       PHP_REQUEST_TERMINATE_TIMEOUT: ${PHP_MAX_EXECUTION_TIME}
+      SOLR_HOCR_PLUGIN_PATH: ${SOLR_HOCR_PLUGIN_PATH}
     extra_hosts:
       host.docker.internal: host-gateway
     labels:
