@@ -102,7 +102,6 @@ the things you can do.  If you want to poke around, here's all the services that
 | Activemq    | [http://islandora.traefik.me:8161](http://islandora.traefik.me:8161)                           |         No          |
 | Solr        | [http://islandora.traefik.me:8983](http://islandora.traefik.me:8983)                           |         No          |
 | Cantaloupe  | [https://islandora.traefik.me/cantaloupe](https://islandora.traefik.me/cantaloupe)             |         Yes         |
-| Matomo      | [https://islandora.traefik.me/matomo/](https://islandora.traefik.me/matomo/)                   |         Yes         |
 | Code Server | [https://islandora.traefik.me:8443/](https://islandora.traefik.me:8443/)                       |         No          |
 
 > **Exposed**: the act of allowing the containerized application's ports to be accessible to the host machine (or public). In most cases this makes the specified URL available for the browser.
@@ -188,7 +187,7 @@ using `CUSTOM_IMAGE_TAG`
 - Run `make push-image` to push that image to your container registry
 
 For convenience a `sample.Dockerfile` is provided which `make build` will use to
-generate a custom image from the [codebase](./codebase) folder. For example if
+generate a custom image from the `codebase` folder. For example if
 you followed the guide above to create the codebase folder from the
 `islandora/demo` image.
 
@@ -233,7 +232,7 @@ To enable using secrets prior to running the `make` commands, copy sample.env
 to .env. Set `USE_SECRETS=true` in your .env file. Make a copy of the files in
 /secrets/template/ to /secrets/live/.
 
-To enable using secrets after run `make local` or `make up`, set 
+To enable using secrets after run `make local` or `make up`, set
 `USE_SECRETS=true` in your .env file. When you run `make docker-compose.yml`, a
 large block of `secrets` will be added at the top of your `docker-compose.yml`
 file.
@@ -266,6 +265,26 @@ Setting admin password now
  [success] Changed password for admin.
 
 ```
+
+### Enable XDebug
+
+```shell
+make xdebug
+```
+
+This will download and enable the [XDebug](https://xdebug.org)
+PHP debugger.
+
+It also changes all of the PHP and Nginx timeouts so your
+debugging session doesn't get shut down while you're working.
+
+Bringing ISLE down and back up will disable the debugger again.
+
+You can put custom XDebug config settings in scripts/extra/xdebug.ini
+
+See the documentation for your code editor for further
+details on how to debug PHP applications.
+Specifically the 'Listen for XDebug' command.
 
 ## Services
 
@@ -394,7 +413,7 @@ lowercasename:
 	echo "first line in command needs to be indented. There are exceptions to this, review functions in the Makefile for examples of these exceptions."
 ```
 
-NOTE: A target you add in the custom.Makefile will not override an existing target with the same label in this repository's defautl Makefile.  
+NOTE: A target you add in the custom.Makefile will not override an existing target with the same label in this repository's defautl Makefile.
 
 Running the new `custom.Makefile` commands are exactly the same as running any other Makefile command. Just run `make` and the function's name.
 ```bash

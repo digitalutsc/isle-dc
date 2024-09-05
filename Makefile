@@ -17,7 +17,6 @@ else  # GNU/Linux
 	SED_DASH_I=sed -i
 endif
 
-
 # If custom.makefile exists include it.
 -include custom.Makefile
 
@@ -41,11 +40,14 @@ export
 ## Add necessary variables                 ##
 #############################################
 
+PHP_MAJOR_VERSION?=8
+PHP_MINOR_VERSION?=3
+
 # Services that are not produced by isle-buildkit.
 EXTERNAL_SERVICES := etcd watchtower traefik
 
 # The minimal set of docker compose files required to be able to run anything.
-REQUIRED_SERVICES ?= activemq alpaca blazegraph cantaloupe crayfish crayfits drupal mariadb matomo solr
+REQUIRED_SERVICES ?= activemq alpaca blazegraph cantaloupe crayfish crayfits drupal mariadb solr
 
 ifeq ($(USE_SECRETS), true)
 	SECRETS := secrets
@@ -115,7 +117,11 @@ CMD := $(shell [ $(IS_DRUPAL_PSSWD_FILE_READABLE) -eq 1 ] && echo 'tee' || echo 
 LATEST_VERSION := $(shell curl -s https://api.github.com/repos/desandro/masonry/releases/latest | grep '\"tag_name\":' | sed -E 's/.*\"([^\"]+)\".*/\1/')
 
 PHP_FPM_PID=/var/run/php-fpm7/php-fpm7.pid
-ifeq ($(shell expr $(TAG) \>= 2.0), 1)
+ifeq ($(shell expr $(TAG) \>= 3.2), 1)
+	PHP_FPM_PID=/var/run/php-fpm83/php-fpm83.pid
+else ifeq ($(shell expr $(TAG) \>= 3.0), 1)
+	PHP_FPM_PID=/var/run/php-fpm82/php-fpm82.pid
+else ifeq ($(shell expr $(TAG) \>= 2.0), 1)
 	PHP_FPM_PID=/var/run/php-fpm81/php-fpm81.pid
 endif
 
@@ -132,44 +138,14 @@ default: download-default-certs docker-compose.yml pull
 
 .PHONY: demo
 .SILENT: demo
-## Make a local site from the install-profile and TODO then add demo content
-demo: generate-secrets
-	$(MAKE) local
-	$(MAKE) demo_content
-	$(MAKE) login
+demo:
+	echo "make demo has been removed. To create a demo site, please follow the instructions at https://islandora.github.io/documentation/installation/docker-local/"
 
 
 .PHONY: local
-#.SILENT: local
-## Make a local site with codebase directory bind mounted, modeled after sandbox.islandora.ca
-local: QUOTED_CURDIR = "$(CURDIR)"
-local: generate-secrets
-	$(MAKE) download-default-certs ENVIRONMENT=local
-	$(MAKE) -B docker-compose.yml ENVIRONMENT=local
-	$(MAKE) pull ENVIRONMENT=local
-	mkdir -p $(CURDIR)/codebase
-	if [ -z "$$(ls -A $(QUOTED_CURDIR)/codebase)" ]; then \
-		docker container run --rm -v $(CURDIR)/codebase:/home/root $(REPOSITORY)/nginx:$(TAG) with-contenv bash -lc 'git clone -b main https://github.com/islandora-devops/islandora-sandbox /tmp/codebase; mv /tmp/codebase/* /home/root;'; \
-	fi
-	$(MAKE) set-files-owner SRC=$(CURDIR)/codebase ENVIRONMENT=local
-	docker compose up -d --remove-orphans
-	@echo "Wait for the /var/www/drupal directory to be available"
-	while ! docker compose exec -T drupal with-contenv bash -lc 'test -d /var/www/drupal'; do \
-		echo "Waiting for /var/www/drupal directory to be available..."; \
-		sleep 2; \
-	done
-	docker compose exec -T drupal with-contenv bash -lc 'chown -R nginx:nginx /var/www/drupal/ && su nginx -s /bin/bash -c "composer install"'
-	$(MAKE) remove_standard_profile_references_from_config drupal-database update-settings-php ENVIRONMENT=local
-	docker compose exec -T drupal with-contenv bash -lc "drush si -y islandora_install_profile_demo --account-pass '$(shell cat secrets/live/DRUPAL_DEFAULT_ACCOUNT_PASSWORD)'"
-	$(MAKE) delete-shortcut-entities && docker compose exec -T drupal with-contenv bash -lc "drush pm:un -y shortcut"
-	docker compose exec -T drupal with-contenv bash -lc "drush en -y migrate_tools"
-	$(MAKE) hydrate ENVIRONMENT=local
-	-docker compose exec -T drupal with-contenv bash -lc 'mkdir -p /var/www/drupal/config/sync && chmod -R 775 /var/www/drupal/config/sync'
-	#docker compose exec -T drupal with-contenv bash -lc 'chown -R `id -u`:nginx /var/www/drupal'
-	#docker compose exec -T drupal with-contenv bash -lc 'drush migrate:rollback islandora_defaults_tags,islandora_tags'
-	curl -k -u admin:'$(shell cat secrets/live/DRUPAL_DEFAULT_ACCOUNT_PASSWORD)' -H "Content-Type: application/json" -d "@build/demo-data/homepage.json" https://${DOMAIN}/node?_format=json
-	curl -k -u admin:'$(shell cat secrets/live/DRUPAL_DEFAULT_ACCOUNT_PASSWORD)' -H "Content-Type: application/json" -d "@build/demo-data/browse-collections.json" https://${DOMAIN}/node?_format=json
-	$(MAKE) login
+.SILENT: local
+local:
+	echo "make local has been removed. To create a development site, please follow the instructions at https://islandora.github.io/documentation/installation/docker-local/"
 
 
 .PHONY: starter
@@ -178,12 +154,16 @@ starter: QUOTED_CURDIR = "$(CURDIR)"
 starter: generate-secrets
 	$(MAKE) starter-init ENVIRONMENT=starter
 	if [ -z "$$(ls -A $(QUOTED_CURDIR)/codebase)" ]; then \
-		docker container run --rm -v $(CURDIR)/codebase:/home/root $(REPOSITORY)/nginx:$(TAG) with-contenv bash -lc 'composer create-project $(CODEBASE_PACKAGE) /tmp/codebase; mv /tmp/codebase/* /home/root;'; \
+		docker container run --rm -v $(CURDIR)/codebase:/home/root $(REPOSITORY)/nginx:$(TAG) with-contenv bash -lc 'composer create-project $(CODEBASE_PACKAGE) /tmp/codebase && mv /tmp/codebase/* /home/root'; \
 	else \
-		docker container run --rm -v $(CURDIR)/codebase:/home/root $(REPOSITORY)/nginx:$(TAG) with-contenv bash -lc 'cd /home/root; composer install'; \
+		docker container run --rm -v $(CURDIR)/codebase:/home/root $(REPOSITORY)/nginx:$(TAG) with-contenv bash -lc 'cd /home/root && composer install'; \
 	fi
 	$(MAKE) set-files-owner SRC=$(CURDIR)/codebase ENVIRONMENT=starter
-	docker compose up -d --remove-orphans
+	rm ./codebase/assets/patches/default_settings.txt
+	cp default_settings.txt ./codebase/assets/patches
+	$(MAKE) set-files-owner SRC=$(CURDIR)/codebase ENVIRONMENT=starter
+	$(MAKE) compose-up
+	docker compose exec -T drupal with-contenv bash -lc 'chown -R nginx:nginx /var/www/drupal/ ; su nginx -s /bin/bash -c "composer install"'
 	$(MAKE) starter-finalize ENVIRONMENT=starter
 
 
@@ -196,29 +176,19 @@ starter_dev: generate-secrets
 		docker container run --rm -v $(CURDIR)/codebase:/home/root $(REPOSITORY)/nginx:$(TAG) with-contenv bash -lc 'git clone -b main https://github.com/Islandora-Devops/islandora-starter-site /home/root;'; \
 	fi
 	$(MAKE) set-files-owner SRC=$(CURDIR)/codebase ENVIRONMENT=starter_dev
-	docker compose up -d --remove-orphans
-		@echo "Wait for the /var/www/drupal directory to be available"
-	while ! docker compose exec -T drupal with-contenv bash -lc 'test -d /var/www/drupal'; do \
-		echo "Waiting for /var/www/drupal directory to be available..."; \
-		sleep 2; \
-	done
-	docker compose exec -T drupal with-contenv bash -lc 'chown -R nginx:nginx /var/www/drupal/ && su nginx -s /bin/bash -c "composer install"'
+	rm ./codebase/assets/patches/default_settings.txt
+	cp default_settings.txt ./codebase/assets/patches
+	$(MAKE) set-files-owner SRC=$(CURDIR)/codebase ENVIRONMENT=starter_dev
+	$(MAKE) compose-up
+	docker compose exec -T -u nginx drupal sh -c 'composer install'
 	$(MAKE) starter-finalize ENVIRONMENT=starter_dev
 
 
 .PHONY: production
-production: generate-secrets
-	$(MAKE) download-default-certs
-	$(MAKE) -B docker-compose.yml
-	$(MAKE) pull
-	docker compose up -d --remove-orphans
-	docker compose exec -T drupal with-contenv bash -lc 'composer install; chown -R nginx:nginx .'
-	$(MAKE) drupal-database update-settings-php
-	docker compose exec -T drupal with-contenv bash -lc "drush si -y --existing-config minimal --account-pass '$(shell cat secrets/live/DRUPAL_DEFAULT_ACCOUNT_PASSWORD)'"
-	docker compose exec -T drupal with-contenv bash -lc "drush -l $(SITE) user:role:add fedoraadmin admin"
-	MIGRATE_IMPORT_USER_OPTION=--userid=1 $(MAKE) hydrate
-	docker compose exec -T drupal with-contenv bash -lc 'drush -l $(SITE) migrate:import --userid=1 islandora_fits_tags'
-	$(MAKE) login
+production: init
+	$(MAKE) compose-up
+	docker compose exec -T -u nginx drupal sh -c 'composer install && chown -R nginx:nginx .'
+	$(MAKE) starter-finalize ENVIRONMENT=starter
 
 
 #############################################
@@ -239,7 +209,7 @@ help:
 		if (helpMessage) { \
 			helpCommand = $$1; sub(/:$$/, "", helpCommand); \
 			helpMessage = substr(lastLine, RSTART + 3, RLENGTH); \
-			if (helpCommand == "up" || helpCommand == "local" || helpCommand == "demo") { \
+			if (helpCommand == "up") { \
 				printf "  ${RED}%-$(TARGET_MAX_CHAR_NUM)s${RESET} ${BLUE}%s${RESET}\n", helpCommand, helpMessage; \
 			} \
 		} \
@@ -252,7 +222,7 @@ help:
 		if (helpMessage) { \
 			helpCommand = $$1; sub(/:$$/, "", helpCommand); \
 			helpMessage = substr(lastLine, RSTART + 3, RLENGTH); \
-			if (helpCommand != "up" && helpCommand != "local" && helpCommand != "demo") { \
+			if (helpCommand != "up") { \
 				printf "  ${RED}%-$(TARGET_MAX_CHAR_NUM)s${RESET} ${BLUE}%s${RESET}\n", helpCommand, helpMessage ; \
 			} \
 		} \
@@ -264,12 +234,7 @@ help:
 .PHONY: pull
 ## Fetches the latest images from the registry.
 pull: docker-compose.yml
-ifeq ($(REPOSITORY), local)
-	# Only need to pull external services if using local images.
-	docker compose pull $(filter $(EXTERNAL_SERVICES), $(SERVICES))
-else
 	docker compose pull
-endif
 
 
 .PHONY: build
@@ -295,9 +260,9 @@ docker-compose.yml: $(SERVICES:%=build/docker-compose/docker-compose.%.yml) .env
 
 .PHONY: up
 .SILENT: up
-## Brings up the containers or builds demo if no containers were found.
+## Brings up the containers or builds starter if no containers were found.
 up:
-	test -f docker-compose.yml && docker compose up -d --remove-orphans || $(MAKE) demo
+	test -f docker-compose.yml && docker compose up -d --remove-orphans || $(MAKE) starter
 	@echo "\n Sleeping for 10 seconds to wait for Drupal to finish building.\n"
 	sleep 10
 	docker compose exec -T drupal with-contenv bash -lc "for_all_sites update_settings_php"
@@ -453,13 +418,35 @@ fcrepo-export:
 ifndef DEST
 	$(error DEST is not set)
 endif
+	docker compose exec -T fcrepo with-contenv bash -lc 'tar zcvf fcrepo-export.tgz -C /data/home/data/ocfl-root/ .'
+	docker compose exec -T fcrepo with-contenv bash -lc 'mv fcrepo-export.tgz /tmp'
+	docker cp $$(docker compose ps -q fcrepo):/tmp/fcrepo-export.tgz $(DEST)
+
+
+# Import fcrepo from zipped tarball
+fcrepo-import: $(SRC)
+ifndef SRC
+	$(error SRC is not set)
+endif
+	docker cp "$(SRC)" $$(docker compose ps -q fcrepo):/tmp/fcrepo-export.tgz
+	docker compose exec -T fcrepo with-contenv bash -lc 'rm -r /data/home/data/ocfl-root/*'
+	docker compose exec -T fcrepo with-contenv bash -lc 'tar zxvf /tmp/fcrepo-export.tgz -C /data/home/data/ocfl-root/ && chown -R tomcat:tomcat /data/home/data/ocfl-root/ && rm /tmp/fcrepo-export.tgz'
+	docker compose exec -T mariadb with-contenv bash -lc 'mysql -e "drop database fcrepo;"'
+	docker compose restart fcrepo
+
+
+# Dump fcrepo as zipped tarball
+fcrepo5-export:
+ifndef DEST
+	$(error DEST is not set)
+endif
 	docker compose exec -T fcrepo with-contenv bash -lc 'java -jar /opt/tomcat/fcrepo-import-export-1.0.1.jar --mode export -r http://$(DOMAIN):8081/fcrepo/rest -d /tmp/fcrepo-export -b -u $${FCREPO_TOMCAT_ADMIN_USER}:$${FCREPO_TOMCAT_ADMIN_PASSWORD}'
 	docker compose exec -T fcrepo with-contenv bash -lc 'cd /tmp && tar zcvf fcrepo-export.tgz fcrepo-export'
 	docker cp $$(docker compose ps -q fcrepo):/tmp/fcrepo-export.tgz $(DEST)
 
 
 # Import fcrepo from zipped tarball
-fcrepo-import: $(SRC)
+fcrepo5-import: $(SRC)
 ifndef SRC
 	$(error SRC is not set)
 endif
@@ -526,7 +513,12 @@ set-files-owner: $(SRC)
 ifndef SRC
 	$(error SRC is not set)
 endif
-	sudo chown -R $(shell id -u):101 $(SRC)
+	@echo "Changing ownership of $(SRC) to $(shell id -u):101"
+	@if sudo chown -R $(shell id -u):101 $(SRC); then \
+		echo "Ownership changed successfully."; \
+	else \
+		echo "Error: Failed to change ownership."; \
+	fi
 
 
 # RemovesForces the site uuid to match that in the config_sync_directory so that
@@ -566,7 +558,7 @@ delete-shortcut-entities:
 .PHONY: hydrate
 .SILENT: hydrate
 ## Reconstitute the site from environment variables.
-hydrate: update-settings-php update-config-from-environment solr-cores namespaces run-islandora-migrations
+hydrate: update-config-from-environment solr-cores namespaces run-islandora-migrations
 	docker compose exec -T drupal drush cr -y
 
 
@@ -578,27 +570,30 @@ login:
 	docker compose exec -T drupal with-contenv bash -lc "drush uli --uri=$(DOMAIN)"
 	echo "=============================\n"
 
-
-.PHONY: starter-init
-starter-init: generate-secrets
+.PHONY: init
+init: generate-secrets
 	$(MAKE) download-default-certs
 	$(MAKE) -B docker-compose.yml
 	$(MAKE) pull
-	mkdir -p $(CURDIR)/codebase
 
+.PHONY: starter-init
+starter-init: init
+	mkdir -p $(CURDIR)/codebase
 
 .PHONY: starter-finalize
 starter-finalize:
-	docker compose exec -T drupal with-contenv bash -lc 'chown -R nginx:nginx .'
-	$(MAKE) drupal-database update-settings-php
+	docker compose exec -T drupal with-contenv bash -lc 'chown -R nginx:nginx . ; echo "Chown Complete"'
+	$(MAKE) drupal-database
+
 	docker compose exec -T drupal with-contenv bash -lc "drush si -y --existing-config minimal --account-pass '$(shell cat secrets/live/DRUPAL_DEFAULT_ACCOUNT_PASSWORD)'"
+	docker compose exec -T drupal with-contenv bash -lc "drush cr"
 	docker compose exec -T drupal with-contenv bash -lc "drush -l $(SITE) user:role:add fedoraadmin admin"
+	@echo "Checking if Solr's healthy"
+	docker compose exec -T solr bash -c 'curl -s http://localhost:8983/solr/admin/info/system?wt=json' | jq -r .lucene || (echo "Solr is not healthy, waiting 10 seconds." && sleep 10)
 	MIGRATE_IMPORT_USER_OPTION=--userid=1 $(MAKE) hydrate
 	docker compose exec -T drupal with-contenv bash -lc 'drush -l $(SITE) migrate:import --userid=1 --tag=islandora'
-	#docker compose exec -T drupal with-contenv bash -lc 'chown -R `id -u`:nginx /var/www/drupal'
-	#docker compose exec -T drupal with-contenv bash -lc 'drush migrate:rollback islandora_defaults_tags,islandora_tags'
 	$(MAKE) login
-
+	$(MAKE) wait-for-drupal-locally
 
 .PHONY: install
 ## Installs drupal site(s) using environment variables.
@@ -609,14 +604,13 @@ install: drupal-database
 
 .PHONY: update-config-from-environment
 ## Updates configuration from environment variables.
-## Allow all commands to fail as the user may not have all the modules like matomo, etc.
+## Allow all commands to fail as the user may not have all the modules.
 .SILENT: update-config-from-environment
 update-config-from-environment:
 	-docker compose exec -T drupal with-contenv bash -lc "for_all_sites configure_islandora_module"
 	-docker compose exec -T drupal with-contenv bash -lc "for_all_sites configure_jwt_module"
 	-docker compose exec -T drupal with-contenv bash -lc "for_all_sites configure_islandora_default_module"
 	-docker compose exec -T drupal with-contenv bash -lc "for_all_sites configure_search_api_solr_module"
-	-docker compose exec -T drupal with-contenv bash -lc "for_all_sites configure_matomo_module"
 	-docker compose exec -T drupal with-contenv bash -lc "for_all_sites configure_openseadragon"
 	-docker compose exec -T drupal with-contenv bash -lc "for_all_sites configure_islandora_default_module"
 
@@ -686,4 +680,54 @@ fix_masonry:
 fix_views:
 	docker cp scripts/patch_views.sh $$(docker ps --format "{{.Names}}" | grep drupal):/var/www/drupal/patch_views.sh
 	docker compose exec -T drupal with-contenv bash -lc "bash /var/www/drupal/patch_views.sh ; rm /var/www/drupal/patch_views.sh ; drush cr"
-  
+
+.PHONY: compose-up
+.SILENT: compose-up
+compose-up:
+	docker compose up -d --remove-orphans
+	while ! docker compose exec -T drupal with-contenv bash -lc 'test -d /var/www/drupal'; do \
+		echo "Waiting for /var/www/drupal directory to be available..."; \
+		sleep 1; \
+	done
+
+.PHONY: wait-for-drupal-locally
+.SILENT: wait-for-drupal-locally
+wait-for-drupal-locally:
+	while ! curl -s -o /dev/null -m 5 https://$(DOMAIN)/ ; do \
+		echo "Waiting for https://$(DOMAIN) to be available..."; \
+		sleep 1; \
+	done
+
+.PHONY: xdebug
+## Turn on xdebug.
+xdebug: TIMEOUT_VALUE=3600
+xdebug:
+
+	$(MAKE) set-timeout TIMEOUT_VALUE=3600
+	sleep 10
+	docker compose exec -T drupal with-contenv bash -lc "apk add php${PHP_MAJOR_VERSION}${PHP_MINOR_VERSION}-pecl-xdebug"
+	docker cp scripts/extra/xdebug.ini $$(docker compose ps -q drupal):/etc/php${PHP_MAJOR_VERSION}${PHP_MINOR_VERSION}/conf.d/xdebug.ini
+	-docker compose exec -T drupal with-contenv bash -lc "chown root:root /etc/php${PHP_MAJOR_VERSION}${PHP_MINOR_VERSION}/conf.d/xdebug.ini"
+	$(XDEBUG_HOST_COMMAND)
+
+	docker compose restart drupal
+	sleep 6
+	docker compose exec -T drupal with-contenv bash -lc "php -i | grep xdebug"
+
+.phony: set-timeout
+## Update all PHP and NGinx timeouts to TIMEOUT_VALUE
+set-timeout:
+	$(SED_DASH_I) 's/NGINX_FASTCGI_READ_TIMEOUT: .*s/NGINX_FASTCGI_READ_TIMEOUT: $(TIMEOUT_VALUE)s/g' docker-compose.yml
+	$(SED_DASH_I) 's/NGINX_FASTCGI_CONNECT_TIMEOUT: .*s/NGINX_FASTCGI_CONNECT_TIMEOUT: $(TIMEOUT_VALUE)s/g' docker-compose.yml
+	$(SED_DASH_I) 's/NGINX_FASTCGI_SEND_TIMEOUT: .*s/NGINX_FASTCGI_SEND_TIMEOUT: $(TIMEOUT_VALUE)s/g' docker-compose.yml
+	$(SED_DASH_I) 's/NGINX_KEEPALIVE_TIMEOUT: .*s/NGINX_KEEPALIVE_TIMEOUT: $(TIMEOUT_VALUE)s/g' docker-compose.yml
+	$(SED_DASH_I) 's/NGINX_PROXY_CONNECT_TIMEOUT: .*s/NGINX_PROXY_CONNECT_TIMEOUT: $(TIMEOUT_VALUE)s/g' docker-compose.yml
+	$(SED_DASH_I) 's/NGINX_PROXY_READ_TIMEOUT: .*s/NGINX_PROXY_READ_TIMEOUT: $(TIMEOUT_VALUE)s/g' docker-compose.yml
+	$(SED_DASH_I) 's/NGINX_PROXY_SEND_TIMEOUT: .*s/NGINX_PROXY_SEND_TIMEOUT: $(TIMEOUT_VALUE)s/g' docker-compose.yml
+	$(SED_DASH_I) 's/NGINX_SEND_TIMEOUT: .*s/NGINX_SEND_TIMEOUT: $(TIMEOUT_VALUE)s/g' docker-compose.yml
+	$(SED_DASH_I) 's/PHP_DEFAULT_SOCKET_TIMEOUT: ".*"/PHP_DEFAULT_SOCKET_TIMEOUT: "$(TIMEOUT_VALUE)"/g' docker-compose.yml
+	$(SED_DASH_I) 's/PHP_MAX_EXECUTION_TIME: ".*"/PHP_MAX_EXECUTION_TIME: "$(TIMEOUT_VALUE)"/g' docker-compose.yml
+	$(SED_DASH_I) 's/PHP_MAX_INPUT_TIME: ".*"/PHP_MAX_INPUT_TIME: "$(TIMEOUT_VALUE)"/g' docker-compose.yml
+	$(SED_DASH_I) 's/PHP_PROCESS_CONTROL_TIMEOUT: ".*"/PHP_PROCESS_CONTROL_TIMEOUT: "$(TIMEOUT_VALUE)"/g' docker-compose.yml
+	$(SED_DASH_I) 's/PHP_REQUEST_TERMINATE_TIMEOUT: ".*"/PHP_REQUEST_TERMINATE_TIMEOUT: "$(TIMEOUT_VALUE)"/g' docker-compose.yml
+	docker compose up -d --force-recreate --remove-orphans

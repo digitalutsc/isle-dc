@@ -1,10 +1,7 @@
 # This file builds a local image from the codebase folder
-version: "3.7"
 networks:
   default:
     internal: true
-  gateway:
-    external: true
 volumes:
   drupal-sites-data:
   solr-data:
