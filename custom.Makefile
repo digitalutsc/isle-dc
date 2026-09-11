@@ -51,7 +51,7 @@ lite_dev: generate-secrets
 
 	# install the site
 	$(MAKE) compose-up
-	docker compose exec -T drupal with-contenv bash -lc 'chown -R nginx:nginx /var/www/drupal/ ; su nginx -s /bin/bash -c "composer install"'
+	docker compose exec -T drupal with-contenv bash -lc 'chown -R nginx:nginx /var/www/drupal/ ; su nginx -s /bin/bash -c "composer install --ignore-platform-req=ext-imagick"'
 	$(MAKE) lite-finalize ENVIRONMENT=local
 
 	# Set config media_thumbnails_video
